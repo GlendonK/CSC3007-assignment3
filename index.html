@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style></style>
+</head>
+
+<body class="body">
+    <svg></svg>
+    <svg id="legend"></svg>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <div class="tooltip"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+    <script>
+
+        let width = 1000, height = 600;
+
+        let svg = d3.select("svg")
+            .attr("viewBox", "0 0 " + width + " " + height)
+
+        // Load external data
+        Promise.all([d3.json("sgmap.json"), d3.csv("population2021.csv")]).then(async data => {
+
+            console.log(data[0]);
+            console.log(data[1]);
+
+            var mapData = data[1].reduce(function (map, obj) {
+                map[obj.Subzone.toUpperCase()] = obj.Population;
+                return map;
+            }, {});
+
+            console.log(mapData)
+            // Map and projection
+            var projection = d3.geoMercator()
+                .center([103.851959, 1.290270])
+                .fitExtent([[20, 20], [980, 580]], data[0]);
+
+            let geopath = d3.geoPath().projection(projection);
+
+            var color = d3.scaleQuantize()
+                .domain([0, 130000])
+                .range(["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b"]);
+
+
+            var legend = d3.legendColor()
+                .labelFormat(d3.format(".0f")).title("Populations In Singapore")
+                .scale(color);
+
+
+
+
+            svg.append("g")
+                .attr("id", "districts")
+                .selectAll("path")
+                .data(data[0].features)
+                .enter()
+                .append("path")
+                .attr("d", geopath)
+                .attr("class", "unselected")
+                .attr("fill", (d) => { if (mapData[d.properties.Name] == "-" || mapData[d.properties.Name] == undefined) { mapData[d.properties.Name] = 0 }; return color(mapData[d.properties.Name]) })
+                .on("mouseover", (event, d) => {
+                    var textData = `${d.properties.Name}, Population: ${mapData[d.properties.Name]}`
+
+
+                    d3.select(".tooltip")
+                        .text(textData)
+                        .style("position", "absolute")
+                        .style("background", "#fff")
+                        .style("left", (event.pageX) + "px")
+                        .style("top", (event.pageY + 10) + "px")
+
+
+                    d3.select(event.currentTarget).classed("selected", true)
+                })
+                .on("mouseout", (event, d) => {
+                    d3.select(".tooltip")
+                        .text("");
+
+                    d3.select(".selected").attr("class", "unselected")
+                })
+
+            svg.append("g")
+                .attr("transform", "translate(800,350)")
+                .call(legend);
+
+        }
+
+        )
+
+
+    </script>
+    <style>
+        .unselected {
+            fill: "#fff";
+            stroke: white;
+            stroke-width: 0.5;
+            background-color: blue;
+        }
+
+        .selected {
+            stroke: lawngreen;
+            stroke-width: 2;
+            fill: papayawhip;
+        }
+
+        .body {
+
+            background-color: lightgrey;
+        }
+    </style>
+
+</body>
+
+</html>
